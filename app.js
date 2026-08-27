@@ -1,0 +1,79 @@
+const DB_NAME="HRN_DB", DB_VERSION=1;
+const hazards={
+"Mecánico":["Aplastamiento / Contacto intempestivo","Atrapamiento / Bloqueo de acceso","Caída de objetos de manipulación","Desniveles / Superficies resbaladizas / Obstáculos","Elementos punzantes / cortantes / enganche / abrasión","Interacción con equipos móviles","Proyección de partículas","Trabajo en altura"],
+"Eléctrico":["Descarga eléctrica"],"Térmico":["Alta temp.","Baja temp.","Material incandescente"],
+"Presión":["Tuberías con presión y conexiones","Fluidos a presión: proyección","Tanques a presión"],
+"Radiación":["Gamma","IRojo","Ultra V","X"],"Sustancias peligrosas":["Biológicas","Explosivos","Gases y humos","Líquidos"],
+"Del ambiente":["Baja luminosidad","Calor / Frío","Hum. excesiva / insuficiente","Intemperie","Ruido"],
+"Ergonómico":["Espacios confinados","Hiperextensión","Mov. antinaturales","Mov. repetitivos","Vibraciones"],
+"De información":["Conexionados","Documentación","Señalización y dispositivos de alarma"],
+"De funcionamiento":["Accionamientos / Pulsadores","Paradas de emergencia","Puesta en marcha intempestiva"]};
+const DPH=[["0.1","Rasguño / Moretón"],["0.5","Quemadura / Corte / Enfermedad corto plazo"],["1","Rotura menor de hueso de dedo, mano o pie"],["2","Rotura mayor de hueso de dedo, mano o pie"],["4","Pérdida de 1 o 2 dedos"],["8","Amputación pierna / mano. Pérdida auditiva o visual parcial"],["15","Muerte"]];
+const LO=[["0.03","Imposible. No puede pasar bajo ninguna circunstancia"],["0.1","Casi improbable. Sólo es posible bajo circunstancias extremas."],["0.5","Es muy improbable. Aunque concebible"],["1","Improbable. Pero podría ocurrir"],["2","Posible. Pero inusual"],["5","Hay posibilidades. Puede pasar"],["8","Probable. No sorpresivo"],["10","Probablemente. Se puede esperar que ocurra"],["15","Cierto. Indudable"]];
+const FE=[["0.1","Infrecuentemente"],["0.2","Anualmente"],["1","Mensualmente"],["1.5","Semanalmente"],["2.5","Diario"],["4","Por hora"],["5","En cada ciclo. Constante"]];
+const NP=[["1","De 1 a 2"],["2","De 3 a 7"],["4","De 8 a 15"],["8","De 16 a 50"],["12","Más de 50"]];
+let db,state={client:null,machine:null,zone:null,assessment:null,photos:[]};
+const $=s=>document.querySelector(s),uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random().toString(16).slice(2);
+const stores=["clients","machines","zones","assessments","photos","settings"];
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{db=r.result;for(const s of stores)if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:"id"})};r.onsuccess=()=>{db=r.result;resolve(db)};r.onerror=()=>reject(r.error)})}
+function tx(s,m="readonly"){return db.transaction(s,m).objectStore(s)}
+function put(s,o){return new Promise((a,b)=>{const r=tx(s,"readwrite").put(o);r.onsuccess=()=>a(o);r.onerror=()=>b(r.error)})}
+function del(s,id){return new Promise((a,b)=>{const r=tx(s,"readwrite").delete(id);r.onsuccess=()=>a();r.onerror=()=>b(r.error)})}
+function all(s){return new Promise((a,b)=>{const r=tx(s).getAll();r.onsuccess=()=>a(r.result);r.onerror=()=>b(r.error)})}
+function get(s,id){return new Promise((a,b)=>{const r=tx(s).get(id);r.onsuccess=()=>a(r.result);r.onerror=()=>b(r.error)})}
+function setView(n){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$("#view"+n).classList.remove("hidden")}
+function breadcrumb(){const a=["Clientes"];if(state.client)a.push(state.client.name);if(state.machine)a.push(state.machine.name);if(state.zone)a.push(state.zone.name);$("#breadcrumbs").textContent=a.join(" › ")}
+function card(h){return `<article class="card">${h}</article>`}
+async function renderClients(){state={client:null,machine:null,zone:null,assessment:null,photos:[]};breadcrumb();setView("Clients");const xs=await all("clients");$("#clientsList").innerHTML=xs.length?xs.map(c=>card(`<span class="tag">${esc(c.industry)}</span><h3>${esc(c.name)}</h3><p>Planta: ${esc(c.plant)}</p><div class="card-actions"><button onclick="selectClient('${c.id}')">Abrir</button><button class="secondary" onclick="editClient('${c.id}')">Editar</button><button class="secondary" onclick="removeItem('clients','${c.id}')">Eliminar</button></div>`)).join(""):`<div class="empty">No hay clientes cargados.</div>`}
+async function renderMachines(){breadcrumb();setView("Machines");$("#machinesTitle").textContent=`Máquinas / líneas — ${state.client.name}`;const xs=(await all("machines")).filter(x=>x.clientId===state.client.id);$("#machinesList").innerHTML=xs.length?xs.map(m=>card(`<h3>${esc(m.name)}</h3><p>${esc(m.description||"")}</p><div class="card-actions"><button onclick="selectMachine('${m.id}')">Abrir</button><button class="secondary" onclick="editMachine('${m.id}')">Editar</button><button class="secondary" onclick="removeItem('machines','${m.id}')">Eliminar</button></div>`)).join(""):`<div class="empty">No hay máquinas o líneas cargadas.</div>`}
+async function renderZones(){breadcrumb();setView("Zones");$("#zonesTitle").textContent=`Zonas — ${state.machine.name}`;const xs=(await all("zones")).filter(x=>x.machineId===state.machine.id);$("#zonesList").innerHTML=xs.length?xs.map(z=>card(`<h3>${esc(z.name)}</h3><p>${esc(z.description||"")}</p><div class="card-actions"><button onclick="selectZone('${z.id}')">Abrir</button><button class="secondary" onclick="editZone('${z.id}')">Editar</button><button class="secondary" onclick="removeItem('zones','${z.id}')">Eliminar</button></div>`)).join(""):`<div class="empty">No hay límites espaciales cargados.</div>`}
+async function renderAssessments(){breadcrumb();setView("Assessments");$("#assessmentsTitle").textContent=`Peligros y riesgos — ${state.zone.name}`;const xs=(await all("assessments")).filter(x=>x.zoneId===state.zone.id);$("#assessmentsList").innerHTML=xs.length?xs.map(a=>card(`<span class="tag">${esc(a.hazardType)}</span><h3>${esc(a.risk)}</h3><div class="risk-card"><div class="hrn">HRN ${num(a.hrn)}</div></div><p>Fotos: ${a.photoCount||0} · ${a.synced?"Sincronizado":"Pendiente"}</p><div class="card-actions"><button onclick="editAssessment('${a.id}')">Abrir / Editar</button><button class="secondary" onclick="removeAssessment('${a.id}')">Eliminar</button></div>`)).join(""):`<div class="empty">No hay análisis para esta zona.</div>`;updatePending()}
+function fillSelect(el,arr){el.innerHTML=arr.map(x=>`<option value="${x[0]}">${x[0]} — ${esc(x[1])}</option>`).join("")}
+function setupAssessmentForm(a={}){$("#hazardType").innerHTML=Object.keys(hazards).map(x=>`<option>${esc(x)}</option>`).join("");fillSelect($("#dph"),DPH);fillSelect($("#lo"),LO);fillSelect($("#fe"),FE);fillSelect($("#np"),NP);$("#hazardType").value=a.hazardType||Object.keys(hazards)[0];populateRisks(a.risk);$("#dph").value=a.dph??"0.1";$("#lo").value=a.lo??"0.03";$("#fe").value=a.fe??"0.1";$("#np").value=a.np??"1";$("#notes").value=a.notes||"";$("#assessmentId").value=a.id||"";state.photos=[];calcHRN();renderPhotos()}
+function populateRisks(sel){const h=$("#hazardType").value;$("#risk").innerHTML=hazards[h].map(x=>`<option>${esc(x)}</option>`).join("");if(sel)$("#risk").value=sel}
+async function renderPhotos(){const ps=state.assessment?await all("photos"):state.photos;const f=state.assessment?ps.filter(p=>p.assessmentId===state.assessment.id):state.photos;$("#photoGrid").innerHTML=f.map(p=>`<div class="photo"><img src="${p.dataUrl}" alt="Evidencia"><button type="button" onclick="removePhoto('${p.id}')">×</button></div>`).join("")}
+function calcHRN(){const v=["#dph","#lo","#fe","#np"].map(s=>Number($(s).value||0));$("#hrnValue").textContent=num(v.reduce((a,b)=>a*b,1))}
+function num(n){return Number.isInteger(Number(n))?String(n):Number(n).toFixed(2).replace(/0+$/,"").replace(/\.$/,"")}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function openClientForm(c={}){$("#clientName").value=c.name||"";$("#industryType").value=c.industry||"";$("#plantName").value=c.plant||"";$("#clientDialog").dataset.editId=c.id||"";$("#clientDialog").showModal()}
+function openMachineForm(m={}){$("#machineName").value=m.name||"";$("#machineDescription").value=m.description||"";$("#machineDialog").dataset.editId=m.id||"";$("#machineDialog").showModal()}
+function openZoneForm(z={}){$("#zoneName").value=z.name||"";$("#zoneDescription").value=z.description||"";$("#zoneDialog").dataset.editId=z.id||"";$("#zoneDialog").showModal()}
+window.selectClient=async id=>{state.client=await get("clients",id);state.machine=null;state.zone=null;renderMachines()}
+window.selectMachine=async id=>{state.machine=await get("machines",id);state.zone=null;renderZones()}
+window.selectZone=async id=>{state.zone=await get("zones",id);renderAssessments()}
+window.editClient=async id=>openClientForm(await get("clients",id));
+window.editMachine=async id=>openMachineForm(await get("machines",id));
+window.editZone=async id=>openZoneForm(await get("zones",id));
+window.editAssessment=async id=>{const a=await get("assessments",id);state.assessment=a;setView("Assessment");breadcrumb();$("#assessmentTitle").textContent="Editar análisis HRN";setupAssessmentForm(a)}
+window.removeItem=async(s,id)=>{if(confirm("¿Eliminar registro?")){await del(s,id);if(s==="clients")renderClients();else if(s==="machines")renderMachines();else renderZones()}}
+window.removeAssessment=async id=>{if(!confirm("¿Eliminar análisis y sus fotos?"))return;for(const p of (await all("photos")).filter(p=>p.assessmentId===id))await del("photos",p.id);await del("assessments",id);renderAssessments()}
+window.removePhoto=async id=>{await del("photos",id);renderPhotos()}
+$("#newClientBtn").onclick=()=>openClientForm();
+$("#clientForm").onsubmit=async e=>{e.preventDefault();const id=$("#clientDialog").dataset.editId||uid();await put("clients",{id,name:$("#clientName").value.trim(),industry:$("#industryType").value.trim(),plant:$("#plantName").value.trim(),updatedAt:new Date().toISOString()});e.target.closest("dialog").close();e.target.reset();$("#clientDialog").dataset.editId="";renderClients()}
+$("#newMachineBtn").onclick=()=>openMachineForm();
+$("#machineForm").onsubmit=async e=>{e.preventDefault();const id=$("#machineDialog").dataset.editId||uid();await put("machines",{id,clientId:state.client.id,name:$("#machineName").value.trim(),description:$("#machineDescription").value.trim(),updatedAt:new Date().toISOString()});e.target.closest("dialog").close();e.target.reset();$("#machineDialog").dataset.editId="";renderMachines()}
+$("#newZoneBtn").onclick=()=>openZoneForm();
+$("#zoneForm").onsubmit=async e=>{e.preventDefault();const id=$("#zoneDialog").dataset.editId||uid();await put("zones",{id,machineId:state.machine.id,name:$("#zoneName").value.trim(),description:$("#zoneDescription").value.trim(),updatedAt:new Date().toISOString()});e.target.closest("dialog").close();e.target.reset();$("#zoneDialog").dataset.editId="";renderZones()}
+$("#newAssessmentBtn").onclick=()=>{state.assessment=null;setView("Assessment");breadcrumb();$("#assessmentTitle").textContent="Nuevo análisis HRN";setupAssessmentForm()}
+$("#cancelAssessmentBtn").onclick=()=>renderAssessments();
+$("#backAssessmentBtn").onclick=()=>renderAssessments();
+$("#backAssessmentsBtn").onclick=()=>renderZones();
+$("#backZonesBtn").onclick=()=>renderMachines();
+$("#backMachinesBtn").onclick=()=>renderClients();
+$("#hazardType").onchange=()=>populateRisks();
+["#dph","#lo","#fe","#np"].forEach(s=>$(s).onchange=calcHRN);
+$("#photoInput").onchange=async e=>{for(const file of [...e.target.files]){const dataUrl=await resizeImage(file,1600);const p={id:uid(),assessmentId:$("#assessmentId").value||"draft",dataUrl,name:file.name,mime:file.type,createdAt:new Date().toISOString()};state.photos.push(p);await put("photos",p)}renderPhotos();e.target.value=""}
+function resizeImage(file,max){return new Promise(resolve=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const scale=Math.min(1,max/img.width);const c=document.createElement("canvas");c.width=img.width*scale;c.height=img.height*scale;c.getContext("2d").drawImage(img,0,0,c.width,c.height);resolve(c.toDataURL("image/jpeg",.82))};img.src=r.result};r.readAsDataURL(file)})}
+$("#assessmentForm").onsubmit=async e=>{e.preventDefault();const id=$("#assessmentId").value||uid();const a={id,zoneId:state.zone.id,hazardType:$("#hazardType").value,risk:$("#risk").value,dph:Number($("#dph").value),lo:Number($("#lo").value),fe:Number($("#fe").value),np:Number($("#np").value),hrn:Number($("#hrnValue").textContent),notes:$("#notes").value,photoCount:(await all("photos")).filter(p=>p.assessmentId===id).length,updatedAt:new Date().toISOString(),synced:false};for(const p of state.photos.filter(p=>p.assessmentId==="draft")){p.assessmentId=id;await put("photos",p)}a.photoCount=(await all("photos")).filter(p=>p.assessmentId===id).length;await put("assessments",a);state.assessment=a;state.photos=[];renderAssessments()}
+async function projectData(){const [clients,machines,zones,assessments,photos]=await Promise.all(stores.slice(0,5).map(all));return{version:5,exportedAt:new Date().toISOString(),clients,machines,zones,assessments,photos}}
+function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function escXml(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;")}
+function csvExport(data){const rows=[["Cliente","Industria","Planta","Máquina/Línea","Zona","Tipo de peligro","Riesgo","DPH","LO","FE","NP","HRN","Observaciones","Fotos","Actualizado"]];const cs=Object.fromEntries(data.clients.map(x=>[x.id,x])),ms=Object.fromEntries(data.machines.map(x=>[x.id,x])),zs=Object.fromEntries(data.zones.map(x=>[x.id,x]));for(const a of data.assessments){const z=zs[a.zoneId]||{},m=ms[z.machineId]||{},c=cs[m.clientId]||{};rows.push([c.name,c.industry,c.plant,m.name,z.name,a.hazardType,a.risk,a.dph,a.lo,a.fe,a.np,a.hrn,a.notes,a.photoCount,a.updatedAt])}return rows.map(r=>r.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(";")).join("\\n")}
+$("#exportBtn").onclick=async()=>downloadBlob(new Blob(["\\ufeff"+csvExport(await projectData())],{type:"text/csv;charset=utf-8"}),"Relevamiento_HRN_V5_1.csv");
+function connection(){const on=navigator.onLine;$("#connectionStatus").textContent=on?"Online":"Offline";$("#connectionStatus").style.color=on?"#b9f6ca":"#ffd3d3";const dot=document.querySelector(".status-dot");if(dot)dot.style.color=on?"#5ee6a8":"#ffcf70"}window.addEventListener("online",connection);window.addEventListener("offline",connection);
+let deferredInstall;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("#installBtn").classList.remove("hidden")});$("#installBtn").onclick=async()=>{if(deferredInstall){deferredInstall.prompt();deferredInstall=null}};
+async function updatePending(){const n=(await all("assessments")).filter(a=>!a.synced).length;$("#pendingCount").textContent="Pendientes: "+n}
+$("#loginBtn").onclick=()=>alert("La interfaz está preparada para Entra ID. La autenticación Graph debe configurarse con el App Registration y permisos del tenant antes de habilitarla en producción.");
+$("#syncBtn").onclick=()=>$("#syncDialog").showModal();
+$("#doGraphSync").onclick=()=>alert("Sincronización Graph/OneDrive pendiente de habilitar con las credenciales del App Registration. Los datos locales no se pierden.");
+(async()=>{await openDB();connection();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js");await renderClients();await updatePending()})();

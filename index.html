@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17365d">
+  <meta name="description" content="Relevamiento HRN offline-first">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+  <title>Relevamiento HRN</title>
+</head>
+<body>
+<div class="app-shell">
+<header class="topbar">
+  <div class="brand-row">
+    <div class="brand-mark" aria-label="HRN">HRN</div>
+    <div class="brand-copy">
+      <h1>Relevamiento HRN</h1>
+      <p>Evaluación profesional de riesgos</p>
+    </div>
+  </div>
+  <div class="top-status"><span class="status-dot">●</span><span id="connectionStatus">Offline</span></div>
+  <div class="top-actions">
+    <button id="installBtn" class="secondary hidden">Instalar</button>
+    <button id="loginBtn" class="secondary">Iniciar sesión</button>
+    <button id="syncBtn" class="secondary">Sincronizar</button>
+    <button id="exportBtn" class="secondary">Exportar Excel</button>
+  </div>
+</header>
+<main>
+  <nav class="breadcrumbs" id="breadcrumbs"></nav>
+
+  <section id="viewClients" class="view">
+    <div class="level-label">NIVEL 1</div>
+    <div class="section-head">
+      <div><h2>Clientes</h2><p>Alta y selección de clientes/planta.</p></div>
+      <button id="newClientBtn">+ Cliente</button>
+    </div>
+    <div id="clientsList" class="cards"></div>
+  </section>
+
+  <section id="viewMachines" class="view hidden">
+    <div class="section-head">
+      <div><h2 id="machinesTitle">Máquinas / líneas</h2><p>Seleccione una máquina o línea del cliente.</p></div>
+      <button id="backMachinesBtn" class="secondary">← Volver</button>
+      <button id="newMachineBtn">+ Máquina / línea</button>
+    </div>
+    <div id="machinesList" class="cards"></div>
+  </section>
+
+  <section id="viewZones" class="view hidden">
+    <div class="section-head">
+      <div><h2 id="zonesTitle">Límites espaciales</h2><p>Defina las zonas/límites espaciales de la máquina.</p></div>
+      <button id="backZonesBtn" class="secondary">← Volver</button>
+      <button id="newZoneBtn">+ Zona</button>
+    </div>
+    <div id="zonesList" class="cards"></div>
+  </section>
+
+  <section id="viewAssessments" class="view hidden">
+    <div class="section-head">
+      <div><h2 id="assessmentsTitle">Peligros y riesgos</h2><p>Seleccione un peligro/riesgo y complete el análisis HRN.</p></div>
+      <button id="backAssessmentsBtn" class="secondary">← Volver</button>
+      <button id="newAssessmentBtn">+ Análisis</button>
+    </div>
+    <div id="assessmentsList" class="cards"></div>
+  </section>
+
+  <section id="viewAssessment" class="view hidden">
+    <div class="section-head">
+      <div><h2 id="assessmentTitle">Análisis HRN</h2><p>Registro del riesgo, evidencias y factores.</p></div>
+      <button id="backAssessmentBtn" class="secondary">← Volver</button>
+    </div>
+    <form id="assessmentForm">
+      <input type="hidden" id="assessmentId">
+      <div class="form-grid">
+        <label>Tipo de peligro
+          <select id="hazardType" required></select>
+        </label>
+        <label>Riesgo asociado
+          <select id="risk" required></select>
+        </label>
+        <label>DPH – daño del riesgo
+          <select id="dph" required></select>
+        </label>
+        <label>LO – probabilidad de ocurrencia
+          <select id="lo" required></select>
+        </label>
+        <label>FE – frecuencia de exposición
+          <select id="fe" required></select>
+        </label>
+        <label>NP – personas en peligro
+          <select id="np" required></select>
+        </label>
+      </div>
+      <div class="hrn-box"><span>HRN = DPH × LO × FE × NP</span><strong id="hrnValue">0</strong></div>
+      <label>Observaciones / análisis
+        <textarea id="notes" rows="5" placeholder="Describa la situación observada, controles existentes, etc."></textarea>
+      </label>
+      <div class="photo-section">
+        <div class="section-head compact">
+          <div><h3>Evidencias fotográficas</h3><p>Una o varias fotos por riesgo identificado.</p></div>
+          <label class="file-button">📷 Capturar / agregar fotos
+            <input id="photoInput" type="file" accept="image/*" capture="environment" multiple>
+          </label>
+        </div>
+        <div id="photoGrid" class="photo-grid"></div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="secondary" id="cancelAssessmentBtn">Cancelar</button>
+        <button type="submit">Guardar análisis</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<dialog id="clientDialog"><form method="dialog" id="clientForm">
+<h3>Nuevo cliente</h3>
+<label>Nombre<input id="clientName" required></label>
+<label>Tipo de industria<input id="industryType" required></label>
+<label>Planta<input id="plantName" required></label>
+<div class="dialog-actions"><button value="cancel" class="secondary">Cancelar</button><button value="default">Guardar</button></div>
+</form></dialog>
+
+<dialog id="machineDialog"><form method="dialog" id="machineForm">
+<h3>Nueva máquina / línea</h3>
+<label>Nombre / identificación<input id="machineName" required></label>
+<label>Descripción<textarea id="machineDescription" rows="3"></textarea></label>
+<div class="dialog-actions"><button value="cancel" class="secondary">Cancelar</button><button value="default">Guardar</button></div>
+</form></dialog>
+
+<dialog id="zoneDialog"><form method="dialog" id="zoneForm">
+<h3>Nuevo límite espacial / zona</h3>
+<label>Nombre / identificación<input id="zoneName" required></label>
+<label>Descripción<textarea id="zoneDescription" rows="3"></textarea></label>
+<div class="dialog-actions"><button value="cancel" class="secondary">Cancelar</button><button value="default">Guardar</button></div>
+</form></dialog>
+
+<dialog id="syncDialog"><form method="dialog" id="syncForm">
+<h3>Sincronización</h3>
+<p class="muted">Los datos se mantienen localmente mientras está offline. La sincronización con OneDrive se habilita al iniciar sesión con Entra ID.</p>
+<div class="dialog-actions"><button value="cancel" class="secondary">Cerrar</button><button id="doGraphSync" value="default">Sincronizar ahora</button></div>
+</form></dialog>
+
+<footer><span>Datos locales: IndexedDB</span><span id="pendingCount">Pendientes: 0</span><span id="authState">No autenticado</span></footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
