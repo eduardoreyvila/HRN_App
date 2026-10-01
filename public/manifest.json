@@ -1,0 +1,10 @@
+{
+  "name":"Relevamiento HRN",
+  "short_name":"HRN",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f5f7fa",
+  "theme_color":"#17365d",
+  "description":"Relevamiento HRN con almacenamiento local en el dispositivo",
+  "icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
