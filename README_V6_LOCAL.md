@@ -1,4 +1,4 @@
-# Relevamiento HRN — V6.0.2 Local
+# Relevamiento HRN — V6.0.4 Local
 
 Versión local/offline de la APP HRN. No usa MSAL, Microsoft Graph, OneDrive, cuentas Microsoft ni servicios remotos.
 
@@ -7,20 +7,21 @@ Versión local/offline de la APP HRN. No usa MSAL, Microsoft Graph, OneDrive, cu
 - Índice y datos de trabajo: IndexedDB del dispositivo.
 - Evidencias y archivos de proyecto: carpeta local seleccionada por el usuario mediante File System Access API.
 - Carpeta objetivo: `08_APP`.
-- La APP crea dentro de `08_APP` una carpeta por proyecto: `Cliente_YYYY-MM-DD`.
+- La APP crea dentro de `08_APP` una carpeta por cliente y, dentro de ella, una carpeta por proyecto: `Cliente/Proyecto_YYYY-MM-DD`.
 
 Estructura:
 
 ```text
 08_APP/
-└── Cliente_YYYY-MM-DD/
-    ├── 00_Datos_Proyecto/
-    │   ├── proyecto.json
-    │   └── Relevamiento_HRN.csv
-    ├── 01_Evidencias/
-    │   └── Máquina/Zona/Riesgo_ID/fotos.jpg
-    └── 02_Datos_Relevados/
-        └── Máquina/Zona/Riesgo_ID.json
+└── Cliente/
+    └── Proyecto_YYYY-MM-DD/
+        ├── 00_Datos_Proyecto/
+        │   ├── proyecto.json
+        │   └── Relevamiento_HRN.csv
+        ├── 01_Evidencias/
+        │   └── Máquina/Zona/Riesgo_ID/fotos.jpg
+        └── 02_Datos_Relevados/
+            └── Máquina/Zona/Riesgo_ID.json
 ```
 
 ## Importante sobre Android/Windows
@@ -31,7 +32,8 @@ La File System Access API requiere un contexto seguro (HTTPS) y un gesto del usu
 
 ## Funcionalidades heredadas
 
-- Cliente/proyecto
+- Cliente
+- Proyecto (Nombre, Planta, Fecha relevamiento, Descripción)
 - Máquina/línea
 - Límites espaciales / zonas
 - Peligro y riesgo asociado
@@ -51,3 +53,11 @@ V6.0.2: se recupera el look and feel de V5.3.1, manteniendo almacenamiento local
 ## V6.0.3
 - Listados de clientes, máquinas/líneas y zonas ordenados alfabéticamente en español.
 - Incorporado logo AVEC en el encabezado en reemplazo del icono HRN.
+
+
+## V6.0.4
+- Nuevo nivel de agrupamiento: Cliente → Proyecto → Máquina → Zona → Análisis.
+- El proyecto incorpora Nombre, Planta, Fecha relevamiento y Descripción.
+- Migración automática de datos existentes de V6.0.3: cada cliente existente recibe un proyecto heredado y sus máquinas se vinculan a él.
+- La estructura física local pasa a ser `08_APP/Cliente/Proyecto_Fecha/`.
+- Listados mantienen orden alfabético.

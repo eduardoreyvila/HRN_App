@@ -31,10 +31,19 @@
   <section id="viewClients" class="view">
     <div class="level-label">NIVEL 1</div>
     <div class="section-head">
-      <div><h2>Clientes</h2><p>Alta y selección de clientes/planta.</p></div>
+      <div><h2>Clientes</h2><p>Alta y selección de clientes.</p></div>
       <button id="newClientBtn">+ Cliente</button>
     </div>
     <div id="clientsList" class="cards"></div>
+  </section>
+
+  <section id="viewProjects" class="view hidden">
+    <div class="section-head">
+      <div><h2 id="projectsTitle">Proyectos</h2><p>Seleccione el proyecto de relevamiento del cliente.</p></div>
+      <button id="backProjectsBtn" class="secondary">← Volver</button>
+      <button id="newProjectBtn">+ Proyecto</button>
+    </div>
+    <div id="projectsList" class="cards"></div>
   </section>
 
   <section id="viewMachines" class="view hidden">
@@ -116,8 +125,15 @@
 <h3>Nuevo cliente</h3>
 <label>Nombre<input id="clientName" required></label>
 <label>Tipo de industria<input id="industryType" required></label>
-<label>Planta<input id="plantName" required></label>
-<label>Fecha de creación del proyecto<input id="projectDate" type="date" required></label>
+<div class="dialog-actions"><button value="cancel" class="secondary">Cancelar</button><button value="default">Guardar</button></div>
+</form></dialog>
+
+<dialog id="projectDialog"><form method="dialog" id="projectForm">
+<h3>Nuevo proyecto</h3>
+<label>Nombre<input id="projectName" required></label>
+<label>Planta<input id="projectPlant" required></label>
+<label>Fecha relevamiento<input id="surveyDate" type="date" required></label>
+<label>Descripción<textarea id="projectDescription" rows="4" placeholder="Descripción del proyecto de relevamiento"></textarea></label>
 <div class="dialog-actions"><button value="cancel" class="secondary">Cancelar</button><button value="default">Guardar</button></div>
 </form></dialog>
 

@@ -1,4 +1,4 @@
-const CACHE = 'hrn-local-v6-0-2-0-1-0-0';
+const CACHE = 'hrn-local-v6-0-4-0-1-0-0';
 self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
